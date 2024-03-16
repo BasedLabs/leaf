@@ -20,12 +20,14 @@ class ObjectType(StrEnum):
 
 
 class Object:
-    def __init__(self, root: RootObject, parent: Object | None, path_or_object_name: str):
+    def __init__(self, path_or_object_name: str, parent: Object | None = None):
         """Create an Object instance
         :param Object parent: The parent filesystem object
         :param str path_or_object_name: Path to the object in the filesystem"""
 
-        self.root_object = root
+        if not parent and not os.path.exists(path_or_object_name) or not os.path.isabs(path_or_object_name):
+            raise LeafException(ErrorCodes.MUST_BE_ABS_PATH).with_additional_message('Must be an absolute path')
+
         self.parent = parent
         self.extension = '.'.join(pathlib.Path(path_or_object_name).suffixes)
         self.name = os.path.basename(path_or_object_name)
@@ -45,9 +47,8 @@ class Object:
             self._permanentize()
 
         o = Object(
-            self.root_object,
-            self,
-            path_or_object_name
+            path_or_object_name,
+            self
         )
 
         if o not in self._temporal_children and o.type == ObjectType.TEMPORAL:
@@ -70,9 +71,8 @@ class Object:
 
         for file in glob.glob(os.path.join(self.full_path, '*')):
             yield Object(
-                self.root_object,
-                self,
-                os.path.basename(file)
+                os.path.basename(file),
+                self
             )
 
     def _permanentize(self):
@@ -203,11 +203,3 @@ class Object:
 
     def __ne__(self, other: Object) -> bool:
         return self.full_path != other.full_path
-
-
-class RootObject(Object):
-    def __init__(self, full_path: str):
-        if not os.path.exists(full_path) or not os.path.isabs(full_path):
-            raise LeafException(ErrorCodes.MUST_BE_ABS_PATH).with_additional_message('Must be an absolute path')
-
-        super().__init__(self, None, full_path)
