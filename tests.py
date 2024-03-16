@@ -1,0 +1,23 @@
+from src.leaf import RootObject
+
+o = RootObject('D:/PycharmProjects/leaf/leaf/files')
+print(o)
+print(list(o.children))
+children = o.add_children('test.json')
+print(list(o.children))
+children2 = o.add_children('test.txt')
+print(children.physically_exists())
+print(children.type)
+children.write_json({'hello': 1})
+print(list(o.children))
+children2.delete()
+print(list(o.children))
+
+directory1 = o.add_children('directory')
+directory1.add_children('dir_test2.txt')
+directory1.add_children('directory2')
+directory2 = directory1.ch_first_or_default(lambda o: o.name == 'directory2')
+directory2.add_children('dir_test3.txt')
+directory2.ch_first_or_default(lambda o: 'txt' in o.name).write_json({'HELLO':1111})
+print(list(directory1.children))
+print(list(directory2.children))
