@@ -49,12 +49,11 @@ class Object:
             self,
             path_or_object_name
         )
-        if o not in self._temporal_children:
-            self._temporal_children.add(o)
-            return o
 
-        raise LeafException(ErrorCodes.MUST_BE_ABS_PATH).with_additional_message(
-            f'Object {path_or_object_name} already exists in {self.full_path}')
+        if o not in self._temporal_children and o.type == ObjectType.TEMPORAL:
+            self._temporal_children.add(o)
+
+        return o
 
     @property
     def children(self) -> Iterable[Object]:
@@ -77,7 +76,7 @@ class Object:
             )
 
     def _permanentize(self):
-        if self.parent:
+        if self.parent and self in self.parent._temporal_children:
             self.parent._temporal_children.remove(self)
 
     def read_string(self) -> str:
@@ -150,8 +149,6 @@ class Object:
 
     @property
     def type(self) -> ObjectType:
-        self._ensure_exists()
-
         if os.path.isdir(self.full_path):
             return ObjectType.DIRECTORY
 

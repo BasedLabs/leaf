@@ -34,4 +34,15 @@ print(list(o.children))
 children2.delete()
 print(list(o.children))
 # [FILE: D:/PycharmProjects/leaf/leaf/files\test.json]
+
+directory1 = o.add_children('directory')
+directory1.add_children('dir_test2.txt')
+directory1.add_children('directory2')
+directory2 = directory1.ch_first_or_default(lambda o: o.name == 'directory2')
+directory2.add_children('dir_test3.txt')
+directory2.ch_first_or_default(lambda o: 'txt' in o.name).write_json({'HELLO':1111})
+print(list(directory1.children))
+# [TEMPORAL: D:/PycharmProjects/leaf/leaf/files\directory\dir_test2.txt, DIRECTORY: D:/PycharmProjects/leaf/leaf/files\directory\directory2]
+print(list(directory2.children))
+# [FILE: D:/PycharmProjects/leaf/leaf/files\directory\directory2\dir_test3.txt]
 ```
