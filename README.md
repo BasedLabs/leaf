@@ -39,5 +39,10 @@ for desc in root.descendants:
 # FILE: D:\PycharmProjects\leaf\leaf\src\files\test\first_file.json
 # FILE: D:\PycharmProjects\leaf\leaf\src\files\test\second_file.json
 
+# Write contents
+f1.write_string('hello')
+print(f1.read_string())
+# hello
+
 shutil.rmtree(root_dir)
 ```
