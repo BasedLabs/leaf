@@ -6,78 +6,71 @@ import os
 import pathlib
 import shutil
 from enum import StrEnum
-from typing import List, Callable, Iterable, TypeVar, Set
+from typing import List, Callable, Iterable, TypeVar
 
-from src.leaf.exception import LeafException, ErrorCodes
+from exception import LeafException, ErrorCodes
 
 T = TypeVar('T')
 
 
 class ObjectType(StrEnum):
-    TEMPORAL = 'TEMPORAL'
     FILE = 'FILE'
     DIRECTORY = 'DIRECTORY'
 
 
 class Object:
-    def __init__(self, path_or_object_name: str, parent: Object | None = None):
+    def __init__(self, path_or_object_name: str, type: ObjectType, parent: Object | None = None):
         """Create an Object instance
         :param Object parent: The parent filesystem object
         :param str path_or_object_name: Path to the object in the filesystem"""
 
-        if not parent and not os.path.exists(path_or_object_name) or not os.path.isabs(path_or_object_name):
-            raise LeafException(ErrorCodes.MUST_BE_ABS_PATH).with_additional_message('Must be an absolute path')
+        if not parent and not os.path.isabs(path_or_object_name):
+            raise LeafException(ErrorCodes.MUST_BE_ABS_PATH).with_additional_message(
+                f'{path_or_object_name} must be an absolute path')
 
         self.parent = parent
         self.extension = '.'.join(pathlib.Path(path_or_object_name).suffixes)
         self.name = os.path.basename(path_or_object_name)
+        self.type = type
 
         if parent:
             self.full_path = os.path.join(parent.full_path, self.name)
         else:
             self.full_path = path_or_object_name
 
-        self._temporal_children: Set[Object] = set()
-
-    def add_children(self, path_or_object_name: str) -> Object:
-        self._ensure_exists()
-
-        if self.type == ObjectType.TEMPORAL:
+        if type == ObjectType.DIRECTORY and not self.physically_exists():
             os.mkdir(self.full_path)
-            self._permanentize()
+        if type == ObjectType.FILE and not self.physically_exists():
+            open(self.full_path, 'a').close()
 
-        o = Object(
-            path_or_object_name,
-            self
-        )
+    def physically_exists(self) -> bool:
+        return os.path.exists(self.full_path)
 
-        if o not in self._temporal_children and o.type == ObjectType.TEMPORAL:
-            self._temporal_children.add(o)
+    def _ensure_exists(self):
+        if self.physically_exists():
+            return
+        raise LeafException(ErrorCodes.OBJECT_DOES_NOT_EXIST).with_additional_message(
+            f'Object {self} was deleted')
 
-        return o
+    def __str__(self):
+        return f'{self.type}: {self.full_path}'
 
-    @property
-    def children(self) -> Iterable[Object]:
-        self._ensure_exists()
+    def __repr__(self):
+        return self.__str__()
 
-        if self.type == ObjectType.FILE:
-            return []
+    def __hash__(self):
+        return self.full_path.__hash__()
 
-        if not self.physically_exists():
-            return []
+    def __eq__(self, other: Object) -> bool:
+        return self.full_path == other.full_path
 
-        for obj in self._temporal_children:
-            yield obj
+    def __ne__(self, other: Object) -> bool:
+        return self.full_path != other.full_path
 
-        for file in glob.glob(os.path.join(self.full_path, '*')):
-            yield Object(
-                os.path.basename(file),
-                self
-            )
 
-    def _permanentize(self):
-        if self.parent and self in self.parent._temporal_children:
-            self.parent._temporal_children.remove(self)
+class FileObject(Object):
+    def __init__(self, path_or_object_name: str, parent: Object | None = None):
+        super().__init__(path_or_object_name, ObjectType.FILE, parent)
 
     def read_string(self) -> str:
         self._ensure_exists()
@@ -94,15 +87,11 @@ class Object:
     def read_bytes(self) -> bytes:
         self._ensure_exists()
 
-        self._permanentize()
-
         with open(self.full_path, "rb") as f:
             return f.read()
 
     def write_string(self, s: str):
         self._ensure_exists()
-
-        self._permanentize()
 
         with open(self.full_path, 'w') as f:
             f.write(s)
@@ -110,96 +99,118 @@ class Object:
     def write_bytes(self, b: bytes):
         self._ensure_exists()
 
-        self._permanentize()
-
         with open(self.full_path, 'wb') as f:
             f.write(b)
+
+    def write_json(self, j):
+        self._ensure_exists()
+
+        json.dump(j, open(self.full_path, 'w'))
 
     def read_json(self) -> T:
         self._ensure_exists()
 
         return json.load(open(self.full_path, 'r'))
 
-    def write_json(self, j):
-        self._ensure_exists()
-
-        self._permanentize()
-
-        json.dump(j, open(self.full_path, 'w'))
-
     def delete(self):
-        if self.parent:
-            self._permanentize()
         if self.physically_exists():
-            if self.type == ObjectType.FILE:
-                os.remove(self.full_path)
-            else:
-                shutil.rmtree(self.full_path)
+            os.remove(self.full_path)
 
-    def physically_exists(self) -> bool:
-        return os.path.exists(self.full_path)
 
-    def _ensure_exists(self):
-        if self.parent and self in self.parent._temporal_children:
-            return
-        if os.path.exists(self.full_path):
-            return
-        raise LeafException(ErrorCodes.OBJECT_DOES_NOT_EXIST).with_additional_message(
-            f'Object {self.full_path} does not exists')
+class DirectoryObject(Object):
+    def __init__(self, path_or_object_name: str, parent: Object | None = None):
+        super().__init__(path_or_object_name, ObjectType.DIRECTORY, parent)
 
     @property
-    def type(self) -> ObjectType:
-        if os.path.isdir(self.full_path):
-            return ObjectType.DIRECTORY
+    def descendants(self) -> Iterable[Object]:
+        self._ensure_exists()
 
-        if os.path.isfile(self.full_path):
-            return ObjectType.FILE
+        if not self.physically_exists():
+            return []
 
-        return ObjectType.TEMPORAL
+        for path in glob.glob(os.path.join(self.full_path, '*')):
+            if os.path.isdir(path):
+                d = DirectoryObject(
+                    os.path.basename(path),
+                    self
+                )
+                yield d
+                yield from d.descendants
+            if os.path.isfile(path):
+                yield FileObject(
+                    os.path.basename(path),
+                    self
+                )
 
-    def ch_where(self, predicate: Callable[[Object], bool], recursive=False) -> Iterable[Object]:
+    @property
+    def children(self) -> Iterable[Object]:
+        self._ensure_exists()
+
+        if not self.physically_exists():
+            return []
+
+        for path in glob.glob(os.path.join(self.full_path, '*')):
+            if os.path.isdir(path):
+                yield DirectoryObject(
+                    os.path.basename(path),
+                    self
+                )
+            if os.path.isfile(path):
+                yield FileObject(
+                    os.path.basename(path),
+                    self
+                )
+
+    def add_file(self, name: str) -> FileObject:
+        o = FileObject(
+            name,
+            self
+        )
+
+        return o
+
+    def add_directory(self, name: str) -> DirectoryObject:
+        o = DirectoryObject(
+            name,
+            self
+        )
+
+        return o
+
+    def delete(self):
+        if self.physically_exists():
+            shutil.rmtree(self.full_path)
+
+    def where(self, predicate: Callable[[Object], bool], recursive=False) -> Iterable[Object]:
         self._ensure_exists()
 
         for child in self.children:
             if predicate(child):
                 yield child
-            if recursive:
-                yield from child.ch_where(predicate)
+            if recursive and isinstance(child, DirectoryObject):
+                yield from child.where(predicate)
 
-    def ch_exists(self, predicate: Callable[[Object], bool], recursive=False) -> bool:
+    def exists(self, predicate: Callable[[Object], bool], recursive=False) -> bool:
+        """Check if the object exists in the tree."""
         self._ensure_exists()
 
         for child in self.children:
             if predicate(child):
                 return True
-            if recursive and child.ch_exists(predicate):
+            if recursive and isinstance(child, DirectoryObject) and child.exists(predicate, recursive=recursive):
                 return True
 
         return False
 
-    def ch_first_or_default(self, predicate: Callable[[Object], bool], recursive=False) -> Object | None:
+    def first_or_default(self, predicate: Callable[[Object], bool], recursive=False) -> Object | None:
+        """Returns the first or None object in the tree by predicate"""
         self._ensure_exists()
 
         for child in self.children:
             if predicate(child):
                 return child
-            if recursive:
-                found = child.ch_first_or_default(predicate)
+            if recursive and isinstance(child, DirectoryObject):
+                found = child.first_or_default(predicate, recursive=recursive)
                 if found:
                     return found
         return None
-
-    def __str__(self):
-        return f'{self.type}: {self.full_path}'
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __hash__(self):
-        return self.full_path.__hash__()
-
-    def __eq__(self, other: Object) -> bool:
-        return self.full_path == other.full_path
-
-    def __ne__(self, other: Object) -> bool:
-        return self.full_path != other.full_path

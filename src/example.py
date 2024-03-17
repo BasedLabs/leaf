@@ -1,10 +1,3 @@
-<h1 align="center">LEAF</h1>
-
-<b>Leaf</b> is a small (just two .py files) in-memory on-demand graph filesystem database.
-
-Example usage:
-
-```python
 import os
 import shutil
 
@@ -40,4 +33,3 @@ for desc in root.descendants:
 # FILE: D:\PycharmProjects\leaf\leaf\src\files\test\second_file.json
 
 shutil.rmtree(root_dir)
-```
