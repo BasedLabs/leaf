@@ -1,6 +1,6 @@
 <h1 align="center">LEAF</h1>
 
-<b>Leaf</b> is a small (just two .py files) in-memory on-demand graph filesystem database.
+<b>Leaf</b> is a small (just two .py files) on-demand hierachical filesystem database.
 
 Example usage:
 
