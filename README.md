@@ -8,8 +8,7 @@ Example usage:
 import os
 import shutil
 
-from leaf import DirectoryObject
-from src.leaf import FileObject
+from leaf import DirectoryObject, FileObject
 
 root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'files')
 os.mkdir(root_dir)
