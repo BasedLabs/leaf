@@ -2,7 +2,13 @@
 
 <b>Leaf</b> is a small (just two .py files) on-demand hierachical filesystem database.
 
-Example usage:
+<h3>Install</h3>
+
+```bash
+pip install leaf-BasedLabs
+```
+
+<h3>Example usage</h3>
 
 ```python
 import os

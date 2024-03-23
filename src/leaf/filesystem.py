@@ -5,10 +5,11 @@ import json
 import os
 import pathlib
 import shutil
+from abc import abstractmethod
 from enum import StrEnum
 from typing import List, Callable, Iterable, TypeVar, Any
 
-from exception import LeafException, ErrorCodes
+from leaf.exception import LeafException, ErrorCodes
 
 T = TypeVar('T', bound='Object')
 
@@ -51,6 +52,10 @@ class Object:
             return
         raise LeafException(ErrorCodes.OBJECT_DOES_NOT_EXIST).with_additional_message(
             f'Object {self} was deleted')
+
+    @abstractmethod
+    def delete(self):
+        pass
 
     def __str__(self):
         return f'{self.type}: {self.full_path}'
@@ -151,9 +156,13 @@ class DirectoryObjects:
     def __init__(self, parent: DirectoryObject):
         self.parent = parent
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[Object]:
         for child in self.parent.where(lambda x: isinstance(x, DirectoryObject)):
             yield child
+
+    def delete(self):
+        for child in self:
+            child.delete()
 
     def where(self, predicate: Callable[[DirectoryObject], bool], recursive=False) -> Iterable[DirectoryObject]:
         for child in self.parent.children:
