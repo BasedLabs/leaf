@@ -1,1 +1,1 @@
-from filesystem import DirectoryObject, FileObject
+from .filesystem import DirectoryObject, FileObject, ObjectType

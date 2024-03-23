@@ -2,7 +2,7 @@ import os
 import shutil
 import unittest
 
-from src.leaf import DirectoryObject
+from src.leaf import DirectoryObject, FileObject
 
 
 class Tests(unittest.TestCase):
@@ -111,6 +111,27 @@ class Tests(unittest.TestCase):
 
         # assert
         self.assertTrue(not os.path.isfile(os.path.join(self.root, 'test', 'test.json')))
+
+    def test_lists_directories(self):
+        # arrange
+        root = DirectoryObject(self.root)
+
+        # act
+        d1: DirectoryObject = root.add_directory('test')
+
+        # assert
+        self.assertEqual(list(root.directories)[0], d1)
+
+    def test_lists_files(self):
+        # arrange
+        root = DirectoryObject(self.root)
+
+        # act
+        d1: DirectoryObject = root.add_directory('test')
+        f1: FileObject = d1.add_file('test.json')
+
+        # assert
+        self.assertEqual(list(d1.files)[0], f1)
 
 
 if __name__ == '__main__':

@@ -6,11 +6,11 @@ import os
 import pathlib
 import shutil
 from enum import StrEnum
-from typing import List, Callable, Iterable, TypeVar
+from typing import List, Callable, Iterable, TypeVar, Any
 
 from exception import LeafException, ErrorCodes
 
-T = TypeVar('T')
+T = TypeVar('T', bound='Object')
 
 
 class ObjectType(StrEnum):
@@ -107,14 +107,72 @@ class FileObject(Object):
 
         json.dump(j, open(self.full_path, 'w'))
 
-    def read_json(self) -> T:
+    def read(self, loader) -> Any:
         self._ensure_exists()
 
-        return json.load(open(self.full_path, 'r'))
+        return loader(open(self.full_path, 'r'))
+
+    def read_json(self) -> T:
+        return self.read(json.load)
 
     def delete(self):
         if self.physically_exists():
             os.remove(self.full_path)
+
+
+class FileObjects:
+    def __init__(self, parent: DirectoryObject):
+        self.parent = parent
+
+    def __iter__(self):
+        for child in self.parent.where(lambda x: isinstance(x, FileObject)):
+            yield child
+
+    def where(self, predicate: Callable[[FileObject], bool], recursive=False) -> Iterable[FileObject]:
+        for child in self.parent.children:
+            if isinstance(child, FileObject) and predicate(child):
+                yield child
+            if recursive and isinstance(child, DirectoryObject):
+                yield from child.files.where(predicate)
+
+    def first_or_default(self, predicate: Callable[[FileObject], bool], recursive=False) -> FileObject | None:
+        """Returns the first or None object in the tree by predicate"""
+        for child in self.parent.children:
+            if isinstance(child, FileObject) and predicate(child):
+                return child
+            if recursive and isinstance(child, DirectoryObject):
+                found = child.files.first_or_default(predicate, recursive=recursive)
+                if found:
+                    return found
+        return None
+
+
+class DirectoryObjects:
+    def __init__(self, parent: DirectoryObject):
+        self.parent = parent
+
+    def __iter__(self):
+        for child in self.parent.where(lambda x: isinstance(x, DirectoryObject)):
+            yield child
+
+    def where(self, predicate: Callable[[DirectoryObject], bool], recursive=False) -> Iterable[DirectoryObject]:
+        for child in self.parent.children:
+            if isinstance(child, DirectoryObject) and predicate(child):
+                yield child
+                if recursive:
+                    yield from child.directories.where(predicate)
+
+    def first_or_default(self, predicate: Callable[[DirectoryObject], bool], recursive=False) -> DirectoryObject | None:
+        """Returns the first or None object in the tree by predicate"""
+        for child in self.parent.children:
+            if isinstance(child, DirectoryObject):
+                if predicate(child):
+                    return child
+                if recursive:
+                    found = child.directories.first_or_default(predicate, recursive=recursive)
+                    if found:
+                        return found
+        return None
 
 
 class DirectoryObject(Object):
@@ -141,6 +199,14 @@ class DirectoryObject(Object):
                     os.path.basename(path),
                     self
                 )
+
+    @property
+    def files(self) -> FileObjects:
+        return FileObjects(self)
+
+    @property
+    def directories(self) -> DirectoryObjects:
+        return DirectoryObjects(self)
 
     @property
     def children(self) -> Iterable[Object]:

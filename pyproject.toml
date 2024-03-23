@@ -1,0 +1,18 @@
+[project]
+name = "leaf_BasedLabs"
+version = "0.0.2"
+authors = [
+  { name="Igor Bruev", email="jaktenstid1@gmail.com" },
+]
+description = "Leaf is a small (just two .py files) on-demand hierachical filesystem database."
+readme = "README.md"
+requires-python = ">=3"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/BasedLabs/leaf"
+Issues = "https://github.com/BasedLabs/leaf/issues"
