@@ -1,6 +1,6 @@
 <h1 align="center">LEAF</h1>
 
-<b>Leaf</b> is a small (just two .py files) in-memory on-demand graph filesystem database.
+<b>Leaf</b> is a small (just two .py files) on-demand hierachical filesystem database.
 
 Example usage:
 
@@ -8,8 +8,7 @@ Example usage:
 import os
 import shutil
 
-from leaf import DirectoryObject
-from src.leaf import FileObject
+from leaf import DirectoryObject, FileObject
 
 root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'files')
 os.mkdir(root_dir)
