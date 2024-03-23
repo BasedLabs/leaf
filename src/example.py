@@ -32,6 +32,10 @@ for desc in root.descendants:
 # FILE: D:\PycharmProjects\leaf\leaf\src\files\test\first_file.json
 # FILE: D:\PycharmProjects\leaf\leaf\src\files\test\second_file.json
 
+print('heehe')
+for dir in root.directories:
+    print([f.name for f in dir.files])
+
 # Write contents
 f1.write_string('hello')
 print(f1.read_string())
