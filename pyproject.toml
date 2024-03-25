@@ -1,6 +1,6 @@
 [project]
 name = "leaf_BasedLabs"
-version = "0.0.5"
+version = "0.0.6"
 authors = [
   { name="Igor Bruev", email="jaktenstid1@gmail.com" },
 ]

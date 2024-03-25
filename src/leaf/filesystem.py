@@ -188,6 +188,10 @@ class DirectoryObject(Object):
     def __init__(self, path_or_object_name: str, parent: Object | None = None):
         super().__init__(path_or_object_name, ObjectType.DIRECTORY, parent)
 
+    def copy(self, destination: DirectoryObject) -> DirectoryObject:
+        shutil.copytree(self.full_path, destination.full_path, dirs_exist_ok=True)
+        return destination
+
     @property
     def descendants(self) -> Iterable[Object]:
         self._ensure_exists()
