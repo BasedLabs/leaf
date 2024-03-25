@@ -112,10 +112,10 @@ class FileObject(Object):
 
         json.dump(j, open(self.full_path, 'w'))
 
-    def read(self, loader) -> Any:
+    def read(self, loader, mode='r') -> Any:
         self._ensure_exists()
 
-        return loader(open(self.full_path, 'r'))
+        return loader(open(self.full_path, mode))
 
     def read_json(self) -> T:
         return self.read(json.load)
