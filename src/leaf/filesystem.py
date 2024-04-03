@@ -6,7 +6,7 @@ import os
 import pathlib
 import shutil
 from abc import abstractmethod
-from enum import StrEnum
+from enum import Enum
 from typing import List, Callable, Iterable, TypeVar, Any
 
 from leaf.exception import LeafException, ErrorCodes
@@ -14,7 +14,7 @@ from leaf.exception import LeafException, ErrorCodes
 T = TypeVar('T', bound='Object')
 
 
-class ObjectType(StrEnum):
+class ObjectType(str, Enum):
     FILE = 'FILE'
     DIRECTORY = 'DIRECTORY'
 
